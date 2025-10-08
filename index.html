@@ -16,6 +16,7 @@
             --text-secondary: #d1d5db;
             --accent-blue: #3b82f6;
             --accent-green: #c2c522;
+            --accent-red: #dc2626;
             --font-main: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
         }
 
@@ -33,19 +34,27 @@
             display: flex;
             width: 100%;
             height: 100%;
+            overflow: hidden;
+            /* Prevents layout jump during drag */
         }
 
         .animation-pane {
-            width: 70%;
+            /* Initial width set by JS, flex properties handle minimum/resizing */
+            flex-grow: 1;
+            flex-shrink: 1;
             padding: 2rem;
             box-sizing: border-box;
             display: flex;
             flex-direction: column;
             gap: 2rem;
+            overflow-y: auto;
+            /* Allow scrolling inside the animation pane */
         }
 
         .controls-pane {
-            width: 30%;
+            /* Initial width set by JS */
+            flex-shrink: 0;
+            /* Prevents controls from shrinking below their set width */
             background-color: var(--bg-medium);
             padding: 2rem;
             box-sizing: border-box;
@@ -55,6 +64,28 @@
             gap: 1.5rem;
             overflow-y: auto;
         }
+
+        /* NEW Splitter Style */
+        #splitter {
+            width: 2px;
+            /* Width of the drag handle */
+            cursor: col-resize;
+            background-color: var(--border-color);
+            flex-shrink: 0;
+            transition: background-color 0.1s;
+        }
+
+        #splitter:hover {
+            background-color: var(--accent-blue);
+        }
+
+        .container.dragging {
+            user-select: none;
+            /* Prevent text selection while dragging */
+            cursor: col-resize;
+        }
+
+        /* END NEW Splitter Style */
 
         h2,
         h3 {
@@ -113,41 +144,46 @@
             background-color: var(--bg-medium);
             border-radius: 0.5rem;
             padding: 1rem;
-            height: 120px;
-            /* --- ADDED LINES START --- */
+            min-height: 120px;
+            /* Adjusted for dual queue visibility */
             overflow-x: scroll;
             overflow-y: hidden;
-            -ms-overflow-style: none;  /* IE and Edge */
-            scrollbar-width: none;  /* Firefox */
-            /* --- ADDED LINES END --- */
+            -ms-overflow-style: none;
+            /* IE and Edge */
+            scrollbar-width: none;
+            /* Firefox */
         }
 
         .queue-container h4,
         .cpu-container h4,
-        .gantt-container h4 {
+        .gantt-container h4,
+        .metrics-table-container h4 {
             margin: 0 0 1rem 0;
             color: var(--text-secondary);
             font-weight: 500;
         }
 
-        /* --- ADDED RULE START --- */
         .queue-container::-webkit-scrollbar {
-            display: none; /* WebKit */
+            display: none;
+            /* WebKit */
         }
-        /* --- ADDED RULE END --- */
 
         .queue-scrollable {
-            /* overflow-x: auto; -- REMOVED */
-            /* overflow-y: hidden; -- REMOVED */
             white-space: nowrap;
             height: 80px;
             padding-bottom: 10px;
-            /* --- MODIFIED LINES START --- */
             display: flex;
-            flex-direction: row-reverse; /* Added */
-            justify-content: flex-end; /* Changed from flex-start */
+            flex-direction: row-reverse;
+            /* Added */
+            justify-content: flex-end;
+            /* Changed from flex-start */
             gap: 10px;
-            /* --- MODIFIED LINES END --- */
+        }
+
+        /* Specific MLQ Queue Sizing */
+        #mlq-queues-container .queue-container {
+            min-height: 120px;
+            padding-bottom: 0.5rem;
         }
 
         .cpu-container {
@@ -181,14 +217,11 @@
             border: 1px solid #fff;
             border-radius: 0.375rem;
             display: inline-block;
-            /* margin-right: 10px; -- REMOVED */
             position: relative;
             text-align: center;
             color: var(--text-primary);
-            /* --- ADDED LINES START --- */
             flex-shrink: 0;
             transition: all 0.5s ease-in-out;
-            /* --- ADDED LINES END --- */
         }
 
         .proc-id {
@@ -204,19 +237,68 @@
         }
 
         .gantt-container {
-            /* flex-grow: 1; -- REMOVED */
-            height: 200px; /* -- ADDED */
+            height: 200px;
+            /* -- ADDED */
             position: relative;
             overflow-x: auto;
-            -ms-overflow-style: none;  /* IE and Edge */
-            scrollbar-width: none;  /* Firefox */
+            -ms-overflow-style: none;
+            /* IE and Edge */
+            scrollbar-width: none;
+            /* Firefox */
         }
 
         /* --- ADDED RULE START --- */
         .gantt-container::-webkit-scrollbar {
-            display: none; /* WebKit */
+            display: none;
+            /* WebKit */
         }
-        /* --- ADDED RULE END --- */
+
+        /* --- NEW METRICS TABLE STYLE --- */
+        .metrics-table-container {
+            flex-grow: 1;
+            background-color: var(--bg-medium);
+            border-radius: 0.5rem;
+            padding: 1rem;
+            display: flex;
+            flex-direction: column;
+            min-height: 100px;
+        }
+
+        .metrics-scrollable {
+            overflow-y: auto;
+            border: 1px solid var(--border-color);
+            border-radius: 0.5rem;
+            max-height: 300px;
+            /* Constraint height for scrolling if many processes */
+        }
+
+        #metrics-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        #metrics-table thead th {
+            background-color: var(--bg-light);
+            position: sticky;
+            top: 0;
+            font-size: 0.875rem;
+            padding: 0.5rem;
+        }
+
+        #metrics-table tbody td {
+            font-size: 0.875rem;
+            padding: 0.5rem;
+            text-align: center;
+            border-bottom: 1px solid var(--border-color);
+            /* Added border-bottom for visibility */
+        }
+
+        #metrics-table th,
+        #metrics-table td {
+            text-align: center;
+        }
+
+        /* --- END NEW METRICS TABLE STYLE --- */
 
         /* Controls Pane */
         .form-group {
@@ -237,7 +319,8 @@
             font-weight: 400;
         }
 
-        input[type="number"] {
+        input[type="number"],
+        select {
             background-color: var(--bg-light);
             border: 1px solid var(--border-color);
             color: var(--text-primary);
@@ -245,10 +328,23 @@
             border-radius: 0.375rem;
             width: 100%;
             box-sizing: border-box;
+            height: 40px;
+        }
+
+        /* Targets WebKit browsers (Chrome, Safari, newer Edge) */
+        input[type=number]::-webkit-inner-spin-button,
+        input[type=number]::-webkit-outer-spin-button {
+            -webkit-appearance: none;
+            margin: 0;
+        }
+
+        /* Targets Firefox */
+        input[type=number] {
+            -moz-appearance: textfield;
         }
 
         .process-table-container {
-            max-height: 250px;
+            max-height: 350px;
             overflow-y: auto;
             border: 1px solid var(--border-color);
             border-radius: 0.5rem;
@@ -257,6 +353,7 @@
         table {
             width: 100%;
             border-collapse: collapse;
+            align-items: center;
         }
 
         th,
@@ -278,14 +375,11 @@
             border-radius: 0.375rem;
             font-weight: 600;
             cursor: pointer;
-            /* --- MODIFIED LINES START --- */
             transition: all 0.2s ease-in-out;
             text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.2);
             box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
-            /* --- MODIFIED LINES END --- */
         }
 
-        /* --- ADDED RULE START --- */
         .btn:active {
             transform: translateY(1px);
             box-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
@@ -295,53 +389,54 @@
             cursor: not-allowed;
             opacity: 0.6;
         }
-        /* --- ADDED RULE END --- */
 
         .btn-primary {
-            /* --- MODIFIED LINES START --- */
             background: linear-gradient(145deg, #4b8df6, #3b82f6);
             color: #fff;
             border: 1px solid #2563eb;
-            /* --- MODIFIED LINES END --- */
         }
 
         .btn-primary:hover {
-            /* --- MODIFIED LINES START --- */
             background: linear-gradient(145deg, #5c9bff, #4a8eff);
             box-shadow: 0 4px 8px rgba(0, 0, 0, 0.25);
-            /* --- MODIFIED LINES END --- */
         }
 
         .btn-secondary {
-            /* --- MODIFIED LINES START --- */
             background: linear-gradient(145deg, var(--bg-light), #4a5668);
             color: var(--text-primary);
             border: 1px solid var(--border-color);
-            /* --- MODIFIED LINES END --- */
         }
 
         .btn-secondary:hover {
-            /* --- MODIFIED LINES START --- */
             background: linear-gradient(145deg, #4c5769, #5a687c);
             box-shadow: 0 4px 8px rgba(0, 0, 0, 0.25);
-            /* --- MODIFIED LINES END --- */
         }
 
+        /* NEW Stop Button Style */
+        .btn-stop {
+            background: linear-gradient(145deg, #ef5350, var(--accent-red));
+            color: #fff;
+            border: 1px solid #c62828;
+            flex-grow: 1;
+        }
+
+        .btn-stop:hover {
+            background: linear-gradient(145deg, #e57373, #ef5350);
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.25);
+        }
+
+
         .btn-danger {
-            /* --- MODIFIED LINES START --- */
             background: linear-gradient(145deg, #e54b4b, #dc2626);
             color: #fff;
-            border: 1px solid #b91c1c;
-            /* --- MODIFIED LINES END --- */
+            border: 11px solid #b91c1c;
             padding: 0.25rem 0.5rem;
             font-size: 0.75rem;
         }
 
         .btn-danger:hover {
-            /* --- MODIFIED LINES START --- */
             background: linear-gradient(145deg, #f75a5a, #e53e3e);
             box-shadow: 0 3px 6px rgba(0, 0, 0, 0.2);
-            /* --- MODIFIED LINES END --- */
         }
 
         .button-group {
@@ -370,25 +465,70 @@
             font-weight: bold;
             color: var(--accent-green);
         }
+
+        /* --- NEW ERROR MESSAGE STYLE --- */
+        .error-message {
+            background-color: #dc2626;
+            /* Red background */
+            color: #fff;
+            padding: 0.75rem;
+            border-radius: 0.5rem;
+            font-weight: bold;
+            text-align: center;
+            margin-top: 1rem;
+            animation: fadeIn 0.3s;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+            }
+
+            to {
+                opacity: 1;
+            }
+        }
     </style>
 </head>
 
 <body>
-    <div class="container">
+    <div class="container" id="app-container">
         <!-- LEFT PANE FOR ANIMATION -->
-        <div class="animation-pane">
+        <div class="animation-pane" id="animation-pane">
             <div class="algorithm-chooser">
                 <div class="chooser-arrow" id="prev-algo">◀</div>
                 <h2 id="algorithm-name">First-Come First-Served</h2>
                 <div class="chooser-arrow" id="next-algo">▶</div>
             </div>
 
+            <!-- Error message will appear here -->
+            <div id="error-container"></div>
+
             <div class="visualization-area">
                 <div class="queue-cpu-container" style="display: flex; align-items: flex-end;">
-                    <div class="queue-container" style="flex-grow:1; min-width: 0;">
-                        <h4>Ready Queue</h4>
-                        <div class="queue-scrollable" id="ready-queue-vis"></div>
+
+                    <!-- 1. Single Queue Container (Visible for all non-MLQ algorithms) -->
+                    <div id="single-queue-container" style="flex-grow:1; min-width: 0;">
+                        <div class="queue-container">
+                            <h4>Ready Queue</h4>
+                            <div class="queue-scrollable" id="ready-queue-vis"></div>
+                        </div>
                     </div>
+
+                    <!-- 2. Dual Queue Container (Visible only for MLQ) -->
+                    <div id="mlq-queues-container"
+                        style="flex-grow:1; min-width: 0; display: none; display: flex; flex-direction: column; gap: 1rem;">
+                        <div class="queue-container">
+                            <h4>High Priority Queue (RR) - Priority 0</h4>
+                            <div class="queue-scrollable" id="mlq-high-queue-vis"></div>
+                        </div>
+                        <div class="queue-container">
+                            <h4>Low Priority Queue (FCFS) - Priority 1</h4>
+                            <div class="queue-scrollable" id="mlq-low-queue-vis"></div>
+                        </div>
+                    </div>
+
+                    <!-- CPU -->
                     <div class="cpu-container">
                         <div class="cpu-box" id="cpu-vis">
                             <h4>CPU</h4>
@@ -396,19 +536,45 @@
                     </div>
                 </div>
 
+                <!-- Gantt Chart -->
                 <div class="gantt-container">
                     <h4>Gantt Chart</h4>
                     <svg id="gantt-chart" width="100%" height="150"></svg>
                 </div>
+
+                <!-- Process Metrics (Kept at the end of the visualization block) -->
+                <div class="metrics-table-container">
+                    <h4>Process Metrics</h4>
+                    <div class="metrics-scrollable">
+                        <table id="metrics-table">
+                            <thead>
+                                <tr>
+                                    <th>Process ID</th>
+                                    <th>Arrival Time</th>
+                                    <th>Burst Time</th>
+                                    <th>Completion Time</th>
+                                    <th>Turnaround Time</th>
+                                    <th>Waiting <Time></Time></th>
+                                </tr>
+                            </thead>
+                            <tbody id="metrics-table-body">
+                                <!-- Metrics rows will be injected here -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
             </div>
         </div>
 
+        <!-- SPLITTER -->
+        <div id="splitter"></div>
+
         <!-- RIGHT PANE FOR CONTROLS -->
-        <div class="controls-pane">
+        <div class="controls-pane" id="controls-pane">
             <h3>Configuration</h3>
 
             <div class="form-group" id="quantum-group" style="display: none;">
-                <label for="time-quantum">Time Quantum (for Round Robin)</label>
+                <label for="time-quantum">Time Quantum</label>
                 <input type="number" id="time-quantum" value="2" min="1">
             </div>
 
@@ -416,16 +582,24 @@
                 <label>Add New Process</label>
                 <div style="display: flex; gap: 0.5rem;">
                     <div style="flex: 1;">
-                        <label for="arrival-time" class="input-label">Arrival</label>
+                        <label for="arrival-time" class="input-label">Arrival Time</label>
                         <input type="number" id="arrival-time" min="0" value="0">
                     </div>
                     <div style="flex: 1;">
-                        <label for="burst-time" class="input-label">Burst</label>
+                        <label for="burst-time" class="input-label">Burst Time</label>
                         <input type="number" id="burst-time" min="1" value="5">
                     </div>
-                    <div id="priority-form-group" style="flex: 1;">
-                        <label for="priority" class="input-label">Priority</label>
-                        <input type="number" id="priority" min="0" value="0">
+
+                    <!-- PRIORITY INPUT CONTAINER -->
+                    <div id="priority-form-group" style="flex: 2;">
+                        <label for="priority-input" class="input-label">Priority</label>
+                        <!-- Numeric Input (Default for Priority) -->
+                        <input type="number" id="priority-input" min="0" value="0">
+                        <!-- Select Input (Only for MLQ) -->
+                        <select id="priority-select" style="display: none">
+                            <option value="0">High (RR)</option>
+                            <option value="1">Low (FCFS)</option>
+                        </select>
                     </div>
                 </div>
                 <button id="add-process-btn" class="btn btn-secondary">Add Process</button>
@@ -437,8 +611,8 @@
                     <thead>
                         <tr>
                             <th>ID</th>
-                            <th>Arrival</th>
-                            <th>Burst</th>
+                            <th>Arrival Time</th>
+                            <th>Burst Time</th>
                             <th class="priority-col">Priority</th>
                             <th></th>
                         </tr>
@@ -451,7 +625,8 @@
 
 
             <div class="button-group">
-                <button id="start-sim-btn" class="btn btn-primary">Start Simulation</button>
+                <button id="start-sim-btn" class="btn btn-primary">Play Simulation</button>
+                <button id="stop-sim-btn" class="btn btn-stop" style="display: none">Stop Simulation</button>
                 <button id="reset-sim-btn" class="btn btn-secondary">Reset</button>
             </div>
 
@@ -475,56 +650,173 @@
         const prevAlgoBtn = document.getElementById('prev-algo');
         const nextAlgoBtn = document.getElementById('next-algo');
         const quantumGroup = document.getElementById('quantum-group');
+        const timeQuantumInput = document.getElementById('time-quantum');
+        const errorContainer = document.getElementById('error-container');
         const addProcessBtn = document.getElementById('add-process-btn');
         const processTableBody = document.querySelector('#process-table tbody');
+        const metricsTableBody = document.getElementById('metrics-table-body');
         const startSimBtn = document.getElementById('start-sim-btn');
+        const stopSimBtn = document.getElementById('stop-sim-btn');
         const resetSimBtn = document.getElementById('reset-sim-btn');
-        const readyQueueVis = document.getElementById('ready-queue-vis');
-        const cpuVis = document.getElementById('cpu-vis');
         const ganttContainer = document.querySelector('.gantt-container');
         const ganttSvg = d3.select("#gantt-chart");
         const avgWaitTimeEl = document.getElementById('avg-wait-time');
         const avgTurnaroundTimeEl = document.getElementById('avg-turnaround-time');
 
+        // Queue Visualization Elements
+        const singleQueueContainer = document.getElementById('single-queue-container');
+        const readyQueueVis = document.getElementById('ready-queue-vis');
+        const mlqQueuesContainer = document.getElementById('mlq-queues-container');
+        const mlqHighQueueVis = document.getElementById('mlq-high-queue-vis');
+        const mlqLowQueueVis = document.getElementById('mlq-low-queue-vis');
+        const cpuVis = document.getElementById('cpu-vis');
+
+        // Priority Input Elements
+        const priorityInput = document.getElementById('priority-input'); // Numeric input
+        const prioritySelect = document.getElementById('priority-select'); // Select input
+        const priorityFormGroup = document.getElementById('priority-form-group'); // Wrapper for priority inputs
+
+        // Resizing Elements
+        const animationPane = document.getElementById('animation-pane');
+        const controlsPane = document.getElementById('controls-pane');
+        const splitter = document.getElementById('splitter');
+        const containerEl = document.getElementById('app-container');
+
         // --- State ---
         let processes = [];
         let processIdCounter = 1;
-        // --- MODIFIED LINES START ---
         const algorithms = [
-            { name: "First-Come, First-Served", key: "FCFS" },
+            { name: "First-Come First-Served (FCFS)", key: "FCFS" },
             { name: "Shortest Job First (SJF)", key: "SJF" },
-            { name: "Shortest Remaining Time Next", key: "SRTN" },
-            { name: "Priority Scheduling", key: "Priority" },
+            { name: "Shortest Remaining Time Next (SRTN) (Preemptive SJF)", key: "SRTN" },
+            { name: "Priority (Non-Preemptive)", key: "Priority-NP" },
+            { name: "Priority (Preemptive)", key: "Priority-P" },
             { name: "Round Robin (RR)", key: "RR" },
             { name: "Multilevel Queue (MLQ)", key: "MLQ" }
         ];
         let currentAlgorithmIndex = 0;
         let simulationRunning = false;
-        // --- MODIFIED LINES END ---
+        let stopSimulationFlag = false;
         const colorScale = d3.scaleOrdinal(d3.schemeTableau10);
 
         // --- Initial Setup ---
         function initialize() {
-            addProcess(0, 8, 2);
-            addProcess(1, 4, 1);
-            addProcess(2, 9, 4);
-            addProcess(3, 5, 3);
+            // Initial dummy processes for demonstration
+            addProcess(0, 8, 2); // P1, AT:0, BT:8, P:2
+            addProcess(1, 4, 1); // P2, AT:1, BT:4, P:1
+            addProcess(2, 9, 4); // P3, AT:2, BT:9, P:4
+            addProcess(3, 5, 3); // P4, AT:3, BT:5, P:3
             updateAlgorithmDisplay();
+            renderMetricsTable();
+            setInitialPaneWidths();
+        }
+
+        // --- Resizing Logic ---
+        let isDragging = false;
+        const MIN_WIDTH = 300;
+
+        function startDrag(e) {
+            if (e.button !== 0) return;
+            isDragging = true;
+            containerEl.classList.add('dragging');
+            document.addEventListener('mousemove', onDrag);
+            document.addEventListener('mouseup', stopDrag);
+            e.preventDefault();
+        }
+
+        function onDrag(e) {
+            if (!isDragging) return;
+
+            const containerRect = containerEl.getBoundingClientRect();
+            const newLeftWidth = e.clientX - containerRect.left;
+            const newRightWidth = containerRect.width - newLeftWidth - splitter.offsetWidth;
+
+            if (newLeftWidth < MIN_WIDTH || newRightWidth < MIN_WIDTH) {
+                return;
+            }
+
+            animationPane.style.width = `${newLeftWidth}px`;
+            controlsPane.style.width = `${newRightWidth}px`;
+        }
+
+        function stopDrag() {
+            isDragging = false;
+            containerEl.classList.remove('dragging');
+            document.removeEventListener('mousemove', onDrag);
+            document.removeEventListener('mouseup', stopDrag);
+        }
+
+        function setInitialPaneWidths() {
+            const containerWidth = containerEl.getBoundingClientRect().width;
+            const splitterWidth = splitter.offsetWidth;
+
+            const initialLeftWidth = (containerWidth - splitterWidth) * 0.7;
+            const initialRightWidth = (containerWidth - splitterWidth) * 0.3;
+
+            animationPane.style.width = `${initialLeftWidth}px`;
+            controlsPane.style.width = `${initialRightWidth}px`;
+        }
+
+        splitter.addEventListener('mousedown', startDrag);
+        window.addEventListener('resize', setInitialPaneWidths);
+        // --- END Resizing Logic ---
+
+
+        // --- Error Handling ---
+        function displayError(message) {
+            errorContainer.innerHTML = `<div class="error-message">${message}</div>`;
+            setTimeout(() => {
+                errorContainer.innerHTML = '';
+            }, 5000);
         }
 
         // --- Algorithm Chooser Logic ---
         function updateAlgorithmDisplay() {
             const currentAlgorithm = algorithms[currentAlgorithmIndex];
             algorithmNameEl.textContent = currentAlgorithm.name;
-            quantumGroup.style.display = currentAlgorithm.key === 'RR' ? 'flex' : 'none';
+            errorContainer.innerHTML = ''; // Clear error on algorithm change
 
-            // --- NEW LOGIC START ---
-            const usesPriority = ['Priority', 'MLQ'].includes(currentAlgorithm.key);
-            document.getElementById('priority-form-group').style.display = usesPriority ? 'block' : 'none';
+            const algorithmKey = currentAlgorithm.key;
+
+            // Toggle Quantum Input for RR and MLQ
+            quantumGroup.style.display = ['RR', 'MLQ'].includes(algorithmKey) ? 'flex' : 'none';
+
+            // Define which algorithms require priority inputs or display the column
+            const usesNumericPriority = ['Priority-NP', 'Priority-P'].includes(algorithmKey);
+            const usesMLQPriority = algorithmKey === 'MLQ';
+
+            const usesPriorityColumn = usesNumericPriority || usesMLQPriority;
+            const showsInput = usesNumericPriority || usesMLQPriority;
+
+            // Toggle form group visibility
+            priorityFormGroup.style.display = showsInput ? 'flex' : 'none';
             document.querySelectorAll('.priority-col').forEach(col => {
-                col.style.display = usesPriority ? '' : 'none';
+                col.style.display = usesPriorityColumn ? '' : 'none';
             });
-            // --- NEW LOGIC END ---
+
+            // Toggle between Numeric and Select Priority Input
+            if (usesMLQPriority) {
+                priorityInput.style.display = 'none';
+                prioritySelect.style.display = 'block';
+            } else if (usesNumericPriority) {
+                priorityInput.style.display = 'block';
+                prioritySelect.style.display = 'none';
+            } else {
+                priorityInput.style.display = 'none';
+                prioritySelect.style.display = 'none';
+            }
+
+            // Toggle Queue Visualization (Single vs Dual)
+            if (algorithmKey === 'MLQ') {
+                singleQueueContainer.style.display = 'none';
+                mlqQueuesContainer.style.display = 'flex'; // Use flex defined in style attribute
+            } else {
+                singleQueueContainer.style.display = 'block';
+                mlqQueuesContainer.style.display = 'none';
+            }
+
+            // Re-render queue to reflect the visible container
+            renderReadyQueue();
         }
 
         prevAlgoBtn.addEventListener('click', () => {
@@ -541,9 +833,19 @@
 
         // --- Process Management ---
         addProcessBtn.addEventListener('click', () => {
+            const currentAlgorithm = algorithms[currentAlgorithmIndex].key;
             const arrival = parseInt(document.getElementById('arrival-time').value) || 0;
             const burst = parseInt(document.getElementById('burst-time').value) || 1;
-            const priority = parseInt(document.getElementById('priority').value) || 0;
+            let priority;
+
+            if (currentAlgorithm === 'MLQ') {
+                // Read from the select input (0 for High/RR, 1 for Low/FCFS)
+                priority = parseInt(prioritySelect.value) || 0;
+            } else {
+                // Read from the numeric input for Priority-NP/P/SRTN/etc.
+                priority = parseInt(priorityInput.value) || 0;
+            }
+
             addProcess(arrival, burst, priority);
         });
 
@@ -563,13 +865,22 @@
             processes.push(newProcess);
             renderProcessTable();
             renderReadyQueue();
+            renderMetricsTable();
         }
 
         function removeProcess(id) {
             if (simulationRunning) return;
             processes = processes.filter(p => p.id !== id);
+
+            // LOGIC ADDED: Reset counter if no processes remain
+            if (processes.length === 0) {
+                processIdCounter = 1;
+            }
+            // END LOGIC ADDED
+
             renderProcessTable();
             renderReadyQueue();
+            renderMetricsTable();
         }
 
         // --- UI Rendering ---
@@ -586,8 +897,33 @@
                 `;
                 processTableBody.appendChild(row);
             });
-            // --- ADDED LINE ---
-            updateAlgorithmDisplay(); // Re-apply visibility after re-render
+            updateAlgorithmDisplay();
+        }
+
+        function renderMetricsTable() {
+            metricsTableBody.innerHTML = '';
+            const sortedProcesses = [...processes].sort((a, b) => {
+                const numA = parseInt(a.id.substring(1));
+                const numB = parseInt(b.id.substring(1));
+                return numA - numB;
+            });
+
+            sortedProcesses.forEach(p => {
+                const row = document.createElement('tr');
+                const CT = p.completionTime !== -1 ? p.completionTime : '--';
+                const TAT = p.completionTime !== -1 ? p.turnaroundTime : '--';
+                const WT = p.completionTime !== -1 ? p.waitingTime : '--';
+
+                row.innerHTML = `
+                    <td style="font-weight: bold; background-color: ${colorScale(p.id)}">${p.id}</td>
+                    <td>${p.arrival}</td>
+                    <td>${p.burst}</td>
+                    <td style="font-weight: bold; color: ${CT !== '--' ? 'var(--text-primary)' : 'var(--text-secondary)'};">${CT}</td>
+                    <td style="font-weight: bold; color: ${TAT !== '--' ? 'var(--accent-blue)' : 'var(--text-secondary)'};">${TAT}</td>
+                    <td style="font-weight: bold; color: ${WT !== '--' ? 'var(--accent-green)' : 'var(--text-secondary)'};">${WT}</td>
+                `;
+                metricsTableBody.appendChild(row);
+            });
         }
 
         function createProcessBlock(process) {
@@ -603,19 +939,48 @@
         }
 
         function renderReadyQueue() {
+            // Clear all queues
             readyQueueVis.innerHTML = '';
+            mlqHighQueueVis.innerHTML = '';
+            mlqLowQueueVis.innerHTML = '';
+
+            const currentAlgorithm = algorithms[currentAlgorithmIndex].key;
             const sortedProcesses = [...processes].sort((a, b) => a.arrival - b.arrival);
-            sortedProcesses.forEach((p, index) => {
-                const block = createProcessBlock(p);
-                block.style.order = index; // Initial order
-                readyQueueVis.appendChild(block);
-            });
+
+            if (currentAlgorithm === 'MLQ') {
+                sortedProcesses.forEach(p => {
+                    const block = createProcessBlock(p);
+                    // Priority 0 goes to High/RR, Priority 1 goes to Low/FCFS
+                    if (p.priority === 0) {
+                        mlqHighQueueVis.appendChild(block);
+                    } else {
+                        mlqLowQueueVis.appendChild(block);
+                    }
+                });
+            } else {
+                // Render all processes in the single queue
+                sortedProcesses.forEach((p, index) => {
+                    const block = createProcessBlock(p);
+                    block.style.order = index;
+                    readyQueueVis.appendChild(block);
+                });
+            }
         }
 
-        // --- NEW FUNCTION START ---
-        function reorderVisualQueue(logicalQueue) {
+        // Helper to get the correct queue element for animation
+        function getQueueElement(proc, isMLQ = false) {
+            if (isMLQ) {
+                return proc.priority === 0 ? mlqHighQueueVis : mlqLowQueueVis;
+            }
+            return readyQueueVis;
+        }
+
+        // Modified function to handle reordering in MLQ or single queue
+        function reorderVisualQueue(logicalQueue, targetQueueVis = readyQueueVis) {
             return new Promise(resolve => {
-                const allVisualBlocks = Array.from(readyQueueVis.children);
+                if (stopSimulationFlag) return resolve();
+
+                const allVisualBlocks = Array.from(targetQueueVis.children);
                 const firstPositions = new Map();
                 allVisualBlocks.forEach(block => {
                     firstPositions.set(block.id, block.getBoundingClientRect());
@@ -624,13 +989,14 @@
                 const queueIds = new Set(logicalQueue.map(p => p.id));
                 allVisualBlocks.forEach(block => {
                     const blockId = block.id.split('-')[1];
+                    // If block is no longer in the queue, hide it or move it out of sight (or remove it if necessary)
                     if (!queueIds.has(blockId)) {
-                        block.style.order = -1;
+                        block.style.order = -1; // Move to the beginning visually if still present
                     }
                 });
 
                 logicalQueue.forEach((proc, index) => {
-                    const procBlock = document.getElementById(`vis-${proc.id}`);
+                    const procBlock = targetQueueVis.querySelector(`#vis-${proc.id}`);
                     if (procBlock) {
                         procBlock.style.order = index;
                     }
@@ -649,8 +1015,8 @@
                         block.style.transition = 'transform 0s';
 
                         requestAnimationFrame(() => {
+                            if (stopSimulationFlag) return;
                             block.style.transform = '';
-                            // --- MODIFIED LINE ---
                             block.style.transition = 'transform 0.5s ease-in-out';
                         });
                     }
@@ -658,76 +1024,134 @@
                 setTimeout(resolve, 500); // Resolve promise after animation duration
             });
         }
-        // --- NEW FUNCTION END ---
 
         // --- Simulation Logic ---
         function sleep(ms) {
-            return new Promise(resolve => setTimeout(resolve, ms));
+            return new Promise(resolve => {
+                if (stopSimulationFlag) return resolve();
+                setTimeout(resolve, ms);
+            });
         }
 
+        function stopSimulation() {
+            stopSimulationFlag = true;
+
+            simulationRunning = false;
+
+            toggleControls(true);
+            stopSimBtn.style.display = 'none';
+            startSimBtn.style.display = 'block';
+
+            cpuVis.innerHTML = '<h4>CPU</h4>';
+
+            displayError("Simulation stopped by user. Resetting process metrics.");
+
+            resetSimulation();
+        }
+
+        stopSimBtn.addEventListener('click', stopSimulation);
+
+        function resetSimulation() {
+            processes.forEach(p => {
+                p.remainingBurst = p.burst;
+                p.startTime = -1;
+                p.completionTime = -1;
+                p.waitingTime = 0;
+                p.turnaroundTime = 0;
+            });
+
+            resetSimulationState();
+            renderReadyQueue();
+            errorContainer.innerHTML = '';
+        }
+
+
         async function startSimulation() {
+            const currentAlgorithm = algorithms[currentAlgorithmIndex];
+            const algorithmKey = currentAlgorithm.key;
+
+            if (['RR', 'MLQ'].includes(algorithmKey)) {
+                const timeQuantum = parseInt(timeQuantumInput.value);
+                if (timeQuantum <= 0 || isNaN(timeQuantum)) {
+                    displayError(`Error: The Time Quantum for ${currentAlgorithm.name} must be a positive integer (greater than 0).`);
+                    return;
+                }
+            }
+
             if (simulationRunning || processes.length === 0) return;
+
+            // Setup for start
+            stopSimulationFlag = false;
             simulationRunning = true;
             toggleControls(false);
+            startSimBtn.style.display = 'none';
+            stopSimBtn.style.display = 'block';
             resetSimulationState();
 
-            // --- ADDED LINES START ---
             // Scroll queue to the end to see the first process exit.
-            const queueContainer = document.querySelector('.queue-container');
-            queueContainer.scrollLeft = queueContainer.scrollWidth;
-            await sleep(50); // Small delay for scroll to register
-            // --- ADDED LINES END ---
+            document.querySelectorAll('.queue-container').forEach(qc => {
+                qc.scrollLeft = qc.scrollWidth;
+            });
+            await sleep(50);
 
-            const algorithmKey = algorithms[currentAlgorithmIndex].key;
+            if (stopSimulationFlag) return;
+
             switch (algorithmKey) {
                 case 'FCFS': await runFCFS(); break;
                 case 'SJF': await runSJF(); break;
-                // --- ADDED LINES START ---
-                case 'SRTN': 
-                    console.log("SRTN algorithm not implemented yet.");
-                    break;
-                // --- ADDED LINES END ---
-                case 'Priority': await runPriority(); break;
+                case 'SRTN': await runSRTN(); break;
+                case 'Priority-NP': await runPriorityNonPreemptive(); break; // Renamed
+                case 'Priority-P': await runPriorityPreemptive(); break;     // New
                 case 'RR': await runRR(); break;
-                // --- ADDED LINES START ---
-                case 'MLQ':
-                    console.log("Multilevel Queue algorithm not implemented yet.");
-                    break;
-                // --- ADDED LINES END ---
+                case 'MLQ': await runMLQ(); break;
             }
 
-            simulationRunning = false;
-            toggleControls(true);
+            // Final state check and cleanup
+            if (!stopSimulationFlag) {
+                simulationRunning = false;
+                toggleControls(true);
+                stopSimBtn.style.display = 'none';
+                startSimBtn.style.display = 'block';
+            }
         }
 
         startSimBtn.addEventListener('click', startSimulation);
 
         resetSimBtn.addEventListener('click', () => {
-            if (simulationRunning) return;
-            processes.forEach(p => {
-                p.remainingBurst = p.burst;
-                p.startTime = -1;
-                p.completionTime = -1;
-            });
-            resetSimulationState();
-            renderReadyQueue();
+            if (simulationRunning) {
+                stopSimulationFlag = true;
+
+                setTimeout(() => {
+                    resetSimulation();
+                    simulationRunning = false;
+                    toggleControls(true);
+                    stopSimBtn.style.display = 'none';
+                    startSimBtn.style.display = 'block';
+                }, 100);
+            } else {
+                resetSimulation();
+            }
         });
 
         function resetSimulationState() {
             ganttSvg.selectAll("*").remove();
             avgWaitTimeEl.textContent = '0.00';
             avgTurnaroundTimeEl.textContent = '0.00';
+            renderMetricsTable();
+            cpuVis.innerHTML = '<h4>CPU</h4>';
         }
 
         function toggleControls(enabled) {
             startSimBtn.disabled = !enabled;
             addProcessBtn.disabled = !enabled;
             document.querySelectorAll('#process-table button').forEach(b => b.disabled = !enabled);
-            document.querySelectorAll('.controls-pane input').forEach(i => i.disabled = !enabled);
+            document.querySelectorAll('.controls-pane input, .controls-pane select').forEach(i => i.disabled = !enabled);
         }
 
-        async function animateProcessToCpu(procId) {
-            const procBlock = document.getElementById(`vis-${procId}`);
+        async function animateProcessToCpu(procId, sourceQueueVis = readyQueueVis) {
+            if (stopSimulationFlag) return;
+
+            const procBlock = sourceQueueVis.querySelector(`#vis-${procId}`);
             if (!procBlock) return;
             const cpuRect = cpuVis.getBoundingClientRect();
             const procRect = procBlock.getBoundingClientRect();
@@ -738,35 +1162,41 @@
             clone.style.top = `${procRect.top}px`;
             document.body.appendChild(clone);
 
-            // --- MODIFIED LINE ---
-            const originalBlockInQueue = document.getElementById(`vis-${procId}`);
+            const originalBlockInQueue = sourceQueueVis.querySelector(`#vis-${procId}`);
             if (originalBlockInQueue) originalBlockInQueue.remove();
 
             clone.style.transition = 'all 0.5s ease-in-out';
             await sleep(10);
+            if (stopSimulationFlag) { clone.remove(); return; }
+
             clone.style.left = `${cpuRect.left + (cpuRect.width - procRect.width) / 2}px`;
             clone.style.top = `${cpuRect.top + (cpuRect.height - procRect.height) / 2}px`;
 
             await sleep(500);
-            // --- MODIFIED LINE ---
-            cpuVis.appendChild(createProcessBlock(processes.find(p => p.id === procId))); // Put a new block in CPU
+            if (stopSimulationFlag) { clone.remove(); return; }
+
+            // Recreate the block in the CPU box to ensure correct styling/state
+            cpuVis.innerHTML = ''; // Clear CPU
+            cpuVis.appendChild(createProcessBlock(processes.find(p => p.id === procId)));
             clone.remove();
         }
 
         async function animateProcessFromCpu(procId) {
+            if (stopSimulationFlag) return;
+
             const procBlock = cpuVis.querySelector(`#vis-${procId}`);
             if (procBlock) {
-                // --- MODIFIED LINES START ---
                 procBlock.style.transition = 'opacity 0.3s ease-out';
                 procBlock.style.opacity = '0';
                 await sleep(300);
+                if (stopSimulationFlag) return;
                 procBlock.remove();
-                // --- MODIFIED LINES END ---
             }
         }
 
-        // --- NEW FUNCTION START ---
-        async function animateCpuToQueue(proc) {
+        async function animateCpuToQueue(proc, targetQueueVis = readyQueueVis) {
+            if (stopSimulationFlag) return;
+
             const procBlock = cpuVis.querySelector(`#vis-${proc.id}`);
             if (!procBlock) return;
 
@@ -776,40 +1206,47 @@
             procBlock.style.top = `${cpuRect.top}px`;
             document.body.appendChild(procBlock);
 
-            const queueContainer = document.querySelector('.queue-container');
+            // Animate scroll of the target queue container
+            const queueContainer = targetQueueVis.parentElement; // Assumes parent is .queue-container
             const queueRect = queueContainer.getBoundingClientRect();
-            // Animate to the beginning of the scrollable content area
+
             const targetX = queueRect.left;
             const targetY = queueRect.top + (queueRect.height - cpuRect.height) / 2 - 5;
 
-            // Animate scroll to keep the returning process in view (scroll to start)
+            // Animate scroll to show the beginning of the queue
             d3.select(queueContainer).transition().duration(500).ease(d3.easeCubicOut)
-                .tween("scrollLeft", function() {
+                .tween("scrollLeft", function () {
+                    if (stopSimulationFlag) return () => { };
                     const i = d3.interpolateNumber(this.scrollLeft, 0);
-                    return function(t) { this.scrollLeft = i(t); };
+                    return function (t) { this.scrollLeft = i(t); };
                 });
-
 
             procBlock.style.transition = 'all 0.5s ease-in-out';
             await sleep(10);
+            if (stopSimulationFlag) { procBlock.remove(); return; }
+
             procBlock.style.left = `${targetX}px`;
             procBlock.style.top = `${targetY}px`;
 
             await sleep(500);
+            if (stopSimulationFlag) { procBlock.remove(); return; }
 
             procBlock.style.position = 'static';
             procBlock.style.left = '';
             procBlock.style.top = '';
-            readyQueueVis.appendChild(procBlock);
-        }
-        // --- NEW FUNCTION END ---
 
-        // --- MODIFIED FUNCTION START ---
+            const updatedProcBlock = createProcessBlock(processes.find(p => p.id === proc.id));
+            updatedProcBlock.style.order = 999; // Move to the end
+            targetQueueVis.appendChild(updatedProcBlock);
+            procBlock.remove();
+        }
+
         async function drawGanttBlock(proc, startTime, duration) {
+            if (stopSimulationFlag) return;
+
             const ganttXScale = 40;
             const ganttWidth = ganttSvg.node().getBoundingClientRect().width;
 
-            // Ensure chart doesn't overflow
             if ((startTime + duration) * ganttXScale > ganttWidth) {
                 ganttSvg.attr("width", (startTime + duration) * ganttXScale + 100);
             }
@@ -817,7 +1254,7 @@
             const block = ganttSvg.append("rect")
                 .attr("x", startTime * ganttXScale)
                 .attr("y", 30)
-                .attr("width", 0) // Start with 0 width
+                .attr("width", 0)
                 .attr("height", 40)
                 .attr("fill", colorScale(proc.id))
                 .attr("stroke", "#111827")
@@ -855,11 +1292,11 @@
 
             text.transition().delay(transitionDuration / 2).duration(200).style("opacity", 1);
 
-            // Animate scroll to keep the current action in view
-            const targetScrollLeft = (startTime * ganttXScale) - 100; // Scroll to just before the new block starts
+            const targetScrollLeft = (startTime * ganttXScale) - 100;
             if (targetScrollLeft > ganttContainer.scrollLeft) {
                 d3.select(ganttContainer).transition(t)
                     .tween("scrollLeft", function () {
+                        if (stopSimulationFlag) return () => { };
                         const i = d3.interpolateNumber(this.scrollLeft, targetScrollLeft);
                         return function (time) { this.scrollLeft = i(time); };
                     });
@@ -867,26 +1304,39 @@
 
             await sleep(transitionDuration);
         }
-        // --- MODIFIED FUNCTION END ---
 
         function updateMetrics() {
-            const completed = processes.filter(p => p.completionTime !== -1);
-            if (completed.length === 0) return;
-
             let totalWait = 0, totalTurnaround = 0;
-            completed.forEach(p => {
-                p.turnaroundTime = p.completionTime - p.arrival;
-                p.waitingTime = p.turnaroundTime - p.burst;
-                totalWait += p.waitingTime;
-                totalTurnaround += p.turnaroundTime;
+            const completed = processes.filter(p => p.completionTime !== -1);
+
+            processes.forEach(p => {
+                const originalProcess = processes.find(op => op.id === p.id);
+                const actualBurst = originalProcess ? originalProcess.burst : p.burst;
+
+                if (p.completionTime !== -1) {
+                    p.turnaroundTime = p.completionTime - p.arrival;
+                    p.waitingTime = p.turnaroundTime - actualBurst;
+                    totalWait += p.waitingTime;
+                    totalTurnaround += p.turnaroundTime;
+                } else {
+                    p.turnaroundTime = 0;
+                    p.waitingTime = 0;
+                }
             });
 
-            avgWaitTimeEl.textContent = (totalWait / completed.length).toFixed(2);
-            avgTurnaroundTimeEl.textContent = (totalTurnaround / completed.length).toFixed(2);
+            if (completed.length > 0) {
+                avgWaitTimeEl.textContent = (totalWait / completed.length).toFixed(2);
+                avgTurnaroundTimeEl.textContent = (totalTurnaround / completed.length).toFixed(2);
+            } else {
+                avgWaitTimeEl.textContent = '0.00';
+                avgTurnaroundTimeEl.textContent = '0.00';
+            }
+
+            renderMetricsTable();
         }
 
         // --- ALGORITHMS ---
-        // FCFS
+
         async function runFCFS() {
             let currentTime = 0;
             const sortedProcesses = [...processes].sort((a, b) => a.arrival - b.arrival);
@@ -896,23 +1346,31 @@
                 .attr("stroke", "var(--accent-green)").attr("stroke-width", 2);
 
             for (const proc of sortedProcesses) {
+                if (stopSimulationFlag) return;
+
                 if (currentTime < proc.arrival) {
                     const idleTime = proc.arrival - currentTime;
-                    await sleep(idleTime * 500); // Simulate idle time
+                    await sleep(idleTime * 500);
+                    if (stopSimulationFlag) return;
                     currentTime = proc.arrival;
                 }
-                await animateProcessToCpu(proc.id);
+                await animateProcessToCpu(proc.id, readyQueueVis);
+                if (stopSimulationFlag) return;
+
                 await drawGanttBlock(proc, currentTime, proc.burst);
+                if (stopSimulationFlag) return;
 
                 currentTime += proc.burst;
                 proc.completionTime = currentTime;
                 await animateProcessFromCpu(proc.id);
+                if (stopSimulationFlag) return;
+
                 updateMetrics();
             }
-            ganttSvg.append("text").attr("x", currentTime * 40).attr("y", 90).attr("text-anchor", "middle").attr("fill", "var(--text-secondary)").text(currentTime);
+            ganttSvg.append("text").attr("x", currentTime * 40).attr("y", 90).attr("text-anchor", "middle").attr("fill", "var(--text-secondary)")
+                .text(currentTime);
         }
 
-        // SJF (Non-preemptive)
         async function runSJF() {
             let currentTime = 0;
             let remainingProcs = [...processes];
@@ -923,35 +1381,43 @@
                 .attr("stroke", "var(--accent-green)").attr("stroke-width", 2);
 
             while (completedCount < processes.length) {
+                if (stopSimulationFlag) return;
+
                 const arrivedProcs = remainingProcs.filter(p => p.arrival <= currentTime);
                 if (arrivedProcs.length === 0) {
                     currentTime++;
-                    await sleep(500); // Idle tick
+                    await sleep(500);
+                    if (stopSimulationFlag) return;
                     continue;
                 }
 
-                arrivedProcs.sort((a, b) => a.burst - b.burst);
+                arrivedProcs.sort((a, b) => a.burst - b.burst || a.arrival - b.arrival);
                 const proc = arrivedProcs[0];
 
-                // --- MODIFIED LINE ---
-                await reorderVisualQueue(arrivedProcs);
+                await reorderVisualQueue(arrivedProcs, readyQueueVis);
+                if (stopSimulationFlag) return;
 
-                await animateProcessToCpu(proc.id);
+                await animateProcessToCpu(proc.id, readyQueueVis);
+                if (stopSimulationFlag) return;
+
                 await drawGanttBlock(proc, currentTime, proc.burst);
+                if (stopSimulationFlag) return;
 
                 currentTime += proc.burst;
                 proc.completionTime = currentTime;
                 await animateProcessFromCpu(proc.id);
+                if (stopSimulationFlag) return;
+
                 updateMetrics();
 
                 remainingProcs = remainingProcs.filter(p => p.id !== proc.id);
                 completedCount++;
             }
-            ganttSvg.append("text").attr("x", currentTime * 40).attr("y", 90).attr("text-anchor", "middle").attr("fill", "var(--text-secondary)").text(currentTime);
+            ganttSvg.append("text").attr("x", currentTime * 40).attr("y", 90).attr("text-anchor", "middle").attr("fill", "var(--text-secondary)")
+                .text(currentTime);
         }
 
-        // Priority (Non-preemptive, lower number is higher priority)
-        async function runPriority() {
+        async function runPriorityNonPreemptive() { // Renamed from runPriority
             let currentTime = 0;
             let remainingProcs = [...processes];
             let completedCount = 0;
@@ -961,34 +1427,139 @@
                 .attr("stroke", "var(--accent-green)").attr("stroke-width", 2);
 
             while (completedCount < processes.length) {
+                if (stopSimulationFlag) return;
+
                 const arrivedProcs = remainingProcs.filter(p => p.arrival <= currentTime);
                 if (arrivedProcs.length === 0) {
                     currentTime++;
-                    await sleep(500); // Idle tick
+                    await sleep(500);
+                    if (stopSimulationFlag) return;
                     continue;
                 }
 
-                arrivedProcs.sort((a, b) => a.priority - b.priority);
+                // Non-preemptive priority: sort by priority (lower number = higher priority), then by arrival time.
+                arrivedProcs.sort((a, b) => a.priority - b.priority || a.arrival - b.arrival);
                 const proc = arrivedProcs[0];
 
-                // --- MODIFIED LINE ---
-                await reorderVisualQueue(arrivedProcs);
+                await reorderVisualQueue(arrivedProcs, readyQueueVis);
+                if (stopSimulationFlag) return;
 
-                await animateProcessToCpu(proc.id);
+                await animateProcessToCpu(proc.id, readyQueueVis);
+                if (stopSimulationFlag) return;
+
                 await drawGanttBlock(proc, currentTime, proc.burst);
+                if (stopSimulationFlag) return;
 
                 currentTime += proc.burst;
                 proc.completionTime = currentTime;
                 await animateProcessFromCpu(proc.id);
+                if (stopSimulationFlag) return;
+
                 updateMetrics();
 
                 remainingProcs = remainingProcs.filter(p => p.id !== proc.id);
                 completedCount++;
             }
-            ganttSvg.append("text").attr("x", currentTime * 40).attr("y", 90).attr("text-anchor", "middle").attr("fill", "var(--text-secondary)").text(currentTime);
+            ganttSvg.append("text").attr("x", currentTime * 40).attr("y", 90).attr("text-anchor", "middle").attr("fill", "var(--text-secondary)")
+                .text(currentTime);
         }
 
-        // Round Robin
+        async function runPriorityPreemptive() { // New function
+            let currentTime = 0;
+            let processesCopy = JSON.parse(JSON.stringify(processes));
+            let completedCount = 0;
+            let runningProcess = null;
+
+            ganttSvg.selectAll(".timeline-indicator")
+                .data([0]).join("line").attr("class", "timeline-indicator")
+                .attr("x1", 0).attr("x2", 0).attr("y1", 20).attr("y2", 100)
+                .attr("stroke", "var(--accent-green)").attr("stroke-width", 2);
+
+            while (completedCount < processes.length) {
+                if (stopSimulationFlag) return;
+
+                const arrivedProcs = processesCopy.filter(p => p.arrival <= currentTime && p.remainingBurst > 0);
+
+                if (arrivedProcs.length === 0) {
+                    if (runningProcess === null) {
+                        currentTime++;
+                        await sleep(500);
+                        if (stopSimulationFlag) return;
+                        continue;
+                    }
+                }
+
+                // Priority Preemption logic: Sort by priority (ascending), then by arrival time.
+                arrivedProcs.sort((a, b) => a.priority - b.priority || a.arrival - b.arrival);
+                let nextProcess = arrivedProcs[0];
+                let isPreemption = false;
+
+                // Check for preemption: if a running process exists AND the next process 
+                // has a strictly higher priority (lower priority number)
+                if (runningProcess && nextProcess && nextProcess.priority < runningProcess.priority) {
+                    isPreemption = true;
+                    const preemptedProc = runningProcess;
+                    runningProcess = nextProcess;
+                    await animateCpuToQueue(preemptedProc, readyQueueVis);
+                    if (stopSimulationFlag) return;
+                } else if (!runningProcess && nextProcess) {
+                    runningProcess = nextProcess;
+                }
+
+                if (runningProcess) {
+                    await reorderVisualQueue(arrivedProcs.filter(p => p.id !== runningProcess.id), readyQueueVis);
+                    if (stopSimulationFlag) return;
+
+                    // If preempted, or if this is the first time running, animate to CPU
+                    if (isPreemption || !cpuVis.querySelector(`#vis-${runningProcess.id}`)) {
+                        await animateProcessToCpu(runningProcess.id, readyQueueVis);
+                        if (stopSimulationFlag) return;
+                    }
+                }
+
+                if (!runningProcess) continue;
+
+                let runStart = currentTime;
+                let runDuration = runningProcess.remainingBurst;
+
+                // Determine run duration: until completion, or until the next higher-priority arrival
+                const nextArrivals = processesCopy.filter(p => p.arrival > currentTime && p.remainingBurst > 0);
+
+                if (nextArrivals.length > 0) {
+                    const nextPreemptionTime = nextArrivals
+                        .filter(p => p.priority < runningProcess.priority)
+                        .reduce((minTime, p) => Math.min(minTime, p.arrival), Infinity);
+
+                    if (nextPreemptionTime !== Infinity) {
+                        runDuration = Math.min(runDuration, nextPreemptionTime - currentTime);
+                    }
+                }
+
+                await drawGanttBlock(runningProcess, runStart, runDuration);
+                if (stopSimulationFlag) return;
+
+                currentTime += runDuration;
+                runningProcess.remainingBurst -= runDuration;
+
+                if (runningProcess.remainingBurst === 0) {
+                    runningProcess.completionTime = currentTime;
+                    const originalProc = processes.find(p => p.id === runningProcess.id);
+                    if (originalProc) originalProc.completionTime = currentTime;
+
+                    await animateProcessFromCpu(runningProcess.id);
+                    if (stopSimulationFlag) return;
+                    updateMetrics();
+                    completedCount++;
+                    runningProcess = null;
+                } else {
+                    // Preemption occurred or need to re-evaluate the highest priority in the queue
+                    runningProcess = null;
+                }
+            }
+            ganttSvg.append("text").attr("x", currentTime * 40).attr("y", 90).attr("text-anchor", "middle").attr("fill", "var(--text-secondary)")
+                .text(currentTime);
+        }
+
         async function runRR() {
             const timeQuantum = parseInt(document.getElementById('time-quantum').value);
             let currentTime = 0;
@@ -1000,56 +1571,256 @@
                 .attr("stroke", "var(--accent-green)").attr("stroke-width", 2);
 
             while (remainingProcs.length > 0 || readyQueue.length > 0) {
-                // Add newly arrived processes to the ready queue
+                if (stopSimulationFlag) return;
+
                 while (remainingProcs.length > 0 && remainingProcs[0].arrival <= currentTime) {
                     readyQueue.push(remainingProcs.shift());
                 }
 
                 if (readyQueue.length === 0) {
                     currentTime++;
-                    await sleep(500); // Idle tick
+                    await sleep(500);
+                    if (stopSimulationFlag) return;
                     continue;
                 }
 
                 const proc = readyQueue.shift();
                 const runTime = Math.min(timeQuantum, proc.remainingBurst);
 
-                // --- MODIFIED LINES START ---
-                await reorderVisualQueue([proc, ...readyQueue]);
+                await reorderVisualQueue([proc, ...readyQueue], readyQueueVis);
+                if (stopSimulationFlag) return;
 
-                await animateProcessToCpu(proc.id);
-                reorderVisualQueue(readyQueue); // Reorder after it leaves, no need to wait
-                // --- MODIFIED LINES END ---
+                await animateProcessToCpu(proc.id, readyQueueVis);
+                if (stopSimulationFlag) return;
+
+                reorderVisualQueue(readyQueue, readyQueueVis);
 
                 await drawGanttBlock(proc, currentTime, runTime);
+                if (stopSimulationFlag) return;
 
                 currentTime += runTime;
                 proc.remainingBurst -= runTime;
 
-                // Add any processes that arrived during execution
                 while (remainingProcs.length > 0 && remainingProcs[0].arrival <= currentTime) {
                     readyQueue.push(remainingProcs.shift());
                 }
 
                 if (proc.remainingBurst > 0) {
-                    readyQueue.push(proc); // Add back to queue if not finished
-                    // --- MODIFIED LINES START ---
-                    await animateCpuToQueue(proc); // Visually move block back
-                    await reorderVisualQueue(readyQueue);
-                    // --- MODIFIED LINES END ---
+                    readyQueue.push(proc);
+                    await animateCpuToQueue(proc, readyQueueVis);
+                    if (stopSimulationFlag) return;
+                    await reorderVisualQueue(readyQueue, readyQueueVis);
+                    if (stopSimulationFlag) return;
                 } else {
                     proc.completionTime = currentTime;
                     await animateProcessFromCpu(proc.id);
+                    if (stopSimulationFlag) return;
                     updateMetrics();
                 }
             }
-            ganttSvg.append("text").attr("x", currentTime * 40).attr("y", 90).attr("text-anchor", "middle").attr("fill", "var(--text-secondary)").text(currentTime);
+            ganttSvg.append("text").attr("x", currentTime * 40).attr("y", 90).attr("text-anchor", "middle").attr("fill", "var(--text-secondary)")
+                .text(currentTime);
         }
+
+        async function runSRTN() {
+            let currentTime = 0;
+            let processesCopy = JSON.parse(JSON.stringify(processes));
+            let completedCount = 0;
+            let runningProcess = null;
+
+            ganttSvg.selectAll(".timeline-indicator")
+                .data([0]).join("line").attr("class", "timeline-indicator")
+                .attr("x1", 0).attr("x2", 0).attr("y1", 20).attr("y2", 100)
+                .attr("stroke", "var(--accent-green)").attr("stroke-width", 2);
+
+            while (completedCount < processes.length) {
+                if (stopSimulationFlag) return;
+
+                const arrivedProcs = processesCopy.filter(p => p.arrival <= currentTime && p.remainingBurst > 0);
+
+                if (arrivedProcs.length === 0) {
+                    if (runningProcess === null) {
+                        currentTime++;
+                        await sleep(500);
+                        if (stopSimulationFlag) return;
+                        continue;
+                    }
+                }
+
+                arrivedProcs.sort((a, b) => a.remainingBurst - b.remainingBurst || a.arrival - b.arrival);
+                let nextProcess = arrivedProcs[0];
+                let isPreemption = false;
+
+                if (runningProcess && nextProcess && runningProcess.remainingBurst > nextProcess.remainingBurst && nextProcess.id !== runningProcess.id) {
+                    isPreemption = true;
+                    const preemptedProc = runningProcess;
+                    runningProcess = nextProcess;
+                    await animateCpuToQueue(preemptedProc, readyQueueVis);
+                    if (stopSimulationFlag) return;
+                } else if (!runningProcess && nextProcess) {
+                    runningProcess = nextProcess;
+                }
+
+                if (runningProcess) {
+                    await reorderVisualQueue(arrivedProcs.filter(p => p.id !== runningProcess.id), readyQueueVis);
+                    if (stopSimulationFlag) return;
+
+                    if (isPreemption || (nextProcess && runningProcess.id === nextProcess.id && !cpuVis.querySelector(`#vis-${runningProcess.id}`))) {
+                        await animateProcessToCpu(runningProcess.id, readyQueueVis);
+                        if (stopSimulationFlag) return;
+                    }
+                }
+
+                if (!runningProcess) continue;
+
+                let runStart = currentTime;
+                let runDuration = runningProcess.remainingBurst;
+
+                const nextArrivals = processesCopy.filter(p => p.arrival > currentTime && p.remainingBurst > 0);
+                if (nextArrivals.length > 0) {
+                    const nextPreemptionTime = nextArrivals
+                        .filter(p => p.burst < runningProcess.remainingBurst)
+                        .reduce((minTime, p) => Math.min(minTime, p.arrival), Infinity);
+
+                    if (nextPreemptionTime !== Infinity) {
+                        runDuration = Math.min(runDuration, nextPreemptionTime - currentTime);
+                    }
+                }
+
+                await drawGanttBlock(runningProcess, runStart, runDuration);
+                if (stopSimulationFlag) return;
+
+                currentTime += runDuration;
+                runningProcess.remainingBurst -= runDuration;
+
+                if (runningProcess.remainingBurst === 0) {
+                    runningProcess.completionTime = currentTime;
+                    const originalProc = processes.find(p => p.id === runningProcess.id);
+                    if (originalProc) originalProc.completionTime = currentTime;
+
+                    await animateProcessFromCpu(runningProcess.id);
+                    if (stopSimulationFlag) return;
+                    updateMetrics();
+                    completedCount++;
+                    runningProcess = null;
+                } else {
+                    runningProcess = null;
+                }
+            }
+            ganttSvg.append("text").attr("x", currentTime * 40).attr("y", 90).attr("text-anchor", "middle").attr("fill", "var(--text-secondary)")
+                .text(currentTime);
+        }
+
+        async function runMLQ() {
+            const timeQuantum = parseInt(document.getElementById('time-quantum').value);
+            let currentTime = 0;
+            let processesCopy = JSON.parse(JSON.stringify(processes));
+            let completedCount = 0;
+
+            // Priority 0: RR, Priority 1: FCFS
+            let queueRR = [];
+            let queueFCFS = [];
+            let remainingProcs = processesCopy.sort((a, b) => a.arrival - b.arrival);
+
+            ganttSvg.selectAll(".timeline-indicator")
+                .data([0]).join("line").attr("class", "timeline-indicator")
+                .attr("x1", 0).attr("x2", 0).attr("y1", 20).attr("y2", 100)
+                .attr("stroke", "var(--accent-green)").attr("stroke-width", 2);
+
+            while (completedCount < processes.length) {
+                if (stopSimulationFlag) return;
+
+                // Add newly arrived processes to appropriate queue
+                while (remainingProcs.length > 0 && remainingProcs[0].arrival <= currentTime) {
+                    const proc = remainingProcs.shift();
+                    if (proc.priority === 0) { // High Priority (RR)
+                        queueRR.push(proc);
+                    } else { // Low Priority (FCFS)
+                        queueFCFS.push(proc);
+                    }
+                }
+
+                // Sort FCFS queue by arrival time for correct selection/reordering
+                queueFCFS.sort((a, b) => a.arrival - b.arrival);
+
+                // Update visual queues before running the process
+                await reorderVisualQueue(queueRR, mlqHighQueueVis);
+                await reorderVisualQueue(queueFCFS, mlqLowQueueVis);
+                if (stopSimulationFlag) return;
+
+
+                let procToRun = null;
+                let runDuration = 0;
+                let fromRR = false;
+
+                // 1. Check High Priority Queue (RR)
+                if (queueRR.length > 0) {
+                    procToRun = queueRR.shift();
+                    runDuration = Math.min(timeQuantum, procToRun.remainingBurst);
+                    fromRR = true;
+
+                    // 2. Check Low Priority Queue (FCFS)
+                } else if (queueFCFS.length > 0) {
+                    procToRun = queueFCFS.shift();
+                    runDuration = procToRun.remainingBurst;
+                    fromRR = false;
+
+                    // 3. CPU Idle
+                } else {
+                    currentTime++;
+                    await sleep(500);
+                    if (stopSimulationFlag) return;
+                    continue;
+                }
+
+                // Animate to CPU
+                const sourceQueueVis = procToRun.priority === 0 ? mlqHighQueueVis : mlqLowQueueVis;
+                await animateProcessToCpu(procToRun.id, sourceQueueVis);
+                if (stopSimulationFlag) return;
+
+                // Draw Gantt Block
+                await drawGanttBlock(procToRun, currentTime, runDuration);
+                if (stopSimulationFlag) return;
+
+                currentTime += runDuration;
+                procToRun.remainingBurst -= runDuration;
+
+                // Add any processes that arrived during the run time
+                while (remainingProcs.length > 0 && remainingProcs[0].arrival <= currentTime) {
+                    const proc = remainingProcs.shift();
+                    if (proc.priority === 0) {
+                        queueRR.push(proc);
+                    } else {
+                        queueFCFS.push(proc);
+                    }
+                }
+
+                // Handle completion or preemption (return to queue)
+                if (procToRun.remainingBurst === 0) {
+                    // Completion
+                    procToRun.completionTime = currentTime;
+                    const originalProc = processes.find(p => p.id === procToRun.id);
+                    if (originalProc) originalProc.completionTime = currentTime;
+
+                    await animateProcessFromCpu(procToRun.id);
+                    if (stopSimulationFlag) return;
+                    updateMetrics();
+                    completedCount++;
+                } else if (fromRR) {
+                    // Preemption (return to RR queue)
+                    queueRR.push(procToRun);
+                    await animateCpuToQueue(procToRun, mlqHighQueueVis);
+                    if (stopSimulationFlag) return;
+                }
+            }
+            ganttSvg.append("text").attr("x", currentTime * 40).attr("y", 90).attr("text-anchor", "middle").attr("fill", "var(--text-secondary)")
+                .text(currentTime);
+        }
+
 
         // --- Initialize ---
         initialize();
 
-        // Initial display
         updateAlgorithmDisplay();
 
         // Scroll to change algorithm
@@ -1057,36 +1828,37 @@
             e.preventDefault();
             if (simulationRunning) return;
             if (e.deltaY > 0) {
-                // scroll down → next
                 currentAlgorithmIndex = (currentAlgorithmIndex + 1) % algorithms.length;
             } else {
-                // scroll up → previous
                 currentAlgorithmIndex = (currentAlgorithmIndex - 1 + algorithms.length) % algorithms.length;
             }
             updateAlgorithmDisplay();
         });
 
+        // Listen to input changes to instantly validate and clear errors
+        timeQuantumInput.addEventListener('input', () => {
+            errorContainer.innerHTML = '';
+        });
+
+
         // --- NEW LOGIC FOR HOVER-SCROLL ---
         function handleHorizontalScroll(container) {
             container.addEventListener('wheel', (e) => {
-                // This prevents the vertical scroll of the page when scrolling
-                // horizontally on the element.
                 if (e.deltaY !== 0) {
                     e.preventDefault();
                 }
-                // Add both deltas to support trackpads (deltaX) and mice (deltaY for horizontal scroll)
                 container.scrollLeft += e.deltaX + e.deltaY;
             });
         }
 
-        handleHorizontalScroll(document.querySelector('.queue-container'));
         handleHorizontalScroll(ganttContainer);
-        // --- END OF NEW LOGIC ---
+        // Ensure all possible queue containers can be scrolled
+        document.querySelectorAll('.queue-container').forEach(container => {
+            handleHorizontalScroll(container);
+        });
+        // --- END OF NEW LOGIC ---\
 
     </script>
 </body>
 
 </html>
-
-
-
